@@ -5,6 +5,28 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, log_loss
 from tqdm import tqdm
 
+from timm.data import Mixup
+from timm.loss import SoftTargetCrossEntropy
+
+def rand_bbox(size, lam):
+    W = size[3]
+    H = size[2]
+    cut_rat = np.sqrt(1. - lam)
+    cut_w = int(W * cut_rat)
+    cut_h = int(H * cut_rat)
+
+    # 중심점 무작위 선택
+    cx = np.random.randint(W)
+    cy = np.random.randint(H)
+
+    bbx1 = np.clip(cx - cut_w // 2, 0, W)
+    bby1 = np.clip(cy - cut_h // 2, 0, H)
+    bbx2 = np.clip(cx + cut_w // 2, 0, W)
+    bby2 = np.clip(cy + cut_h // 2, 0, H)
+
+    return bbx1, bby1, bbx2, bby2
+
+
 class EarlyStopping:
     def __init__(self, patience=3, verbose=True):
         self.patience = patience
@@ -64,17 +86,22 @@ def multiclass_log_loss(answer_df, submission_df):
 
     return log_loss(true_idx, y_pred, labels=list(range(len(class_list))))
 
-def train_one_epoch(model, dataloader, criterion, optimizer, device):
+def train_one_epoch(model, dataloader, criterion, optimizer, device, mixup_fn=None):
     model.train()
     total_loss = 0
     for x, y, *_ in tqdm(dataloader, desc="Train", leave=False):
         x, y = x.to(device), y.to(device)
+
+        if mixup_fn is not None:
+            x, y = mixup_fn(x, y) # y는 soft-label(one-hot)
+
         optimizer.zero_grad()
         out = model(x)
         loss = criterion(out, y)
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * x.size(0)
+        
     return total_loss / len(dataloader.dataset)
 
 def evaluate(model, dataloader, device):

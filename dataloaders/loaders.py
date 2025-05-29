@@ -15,7 +15,7 @@ input_sizes = {
 }
 
 # 제외할 모델
-exclude = {'resnet50', 'efficientnet_b4', 'vit_base_patch16_224'}
+exclude = {'resnet50', 'efficientnet_b4'}
 
 # ✅ Subset에 transform을 적용할 수 있도록 커스텀 Dataset 클래스 정의
 class TransformSubset(torch.utils.data.Dataset):
@@ -57,9 +57,10 @@ def stratified_split(dataset, val_ratio=0.2, seed=28):
 def get_vit_transform(is_training):
     if is_training:
         return transforms.Compose([
-            transforms.RandomResizedCropAndInterpolation(224, scale=(0.08, 1.0), ratio=(0.75, 1.3333), interpolation='bilinear'),
+            transforms.RandomResizedCrop(224, scale=(0.08, 1.0), ratio=(0.75, 1.3333), interpolation=transforms.InterpolationMode.BILINEAR),
             transforms.RandomHorizontalFlip(p=0.5),
-            AutoAugment(policy=AutoAugmentPolicy.IMAGENET),
+            transforms.RandomApply([transforms.ColorJitter(brightness=(0.6, 1.4), contrast=(0.6, 1.4), saturation=(0.6, 1.4))], p=0.8),
+            # transforms.RandomApply([transforms.RandomRotation(degrees=10)], p=0.5),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225]),
@@ -80,13 +81,12 @@ def get_swin_transform(is_training):
         return transforms.Compose([
             transforms.RandomResizedCrop(224, scale=(0.08, 1.0), ratio=(0.75, 1.3333), interpolation=transforms.InterpolationMode.BILINEAR),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.ColorJitter(brightness=(0.6, 1.4), contrast=(0.6, 1.4), saturation=(0.6, 1.4)),
+            transforms.RandomApply([transforms.ColorJitter(brightness=(0.6, 1.4), contrast=(0.6, 1.4), saturation=(0.6, 1.4))], p=0.8),
             # transforms.RandomApply([transforms.RandomRotation(degrees=10)], p=0.5),
-            # transforms.RandomApply([transforms.ColorJitter(0.2, 0.2, 0.2, 0.1)], p=0.5),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225]),
-            # transforms.RandomErasing(p=0.25, scale=(0.02, 0.2), ratio=(0.3, 3.3), value='random')
+            transforms.RandomErasing(p=0.25, scale=(0.02, 0.2), ratio=(0.3, 3.3), value='random')
         ])
     else:
         return transforms.Compose([
