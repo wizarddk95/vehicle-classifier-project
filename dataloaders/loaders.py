@@ -15,7 +15,7 @@ input_sizes = {
 }
 
 # 제외할 모델
-exclude = {'resnet50', 'efficientnet_b4'}
+exclude = {'resnet50', 'efficientnet_b4', 'vit_base_patch16_224'}
 
 # ✅ Subset에 transform을 적용할 수 있도록 커스텀 Dataset 클래스 정의
 class TransformSubset(torch.utils.data.Dataset):
